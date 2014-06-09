@@ -68,7 +68,7 @@ public class StorageListener implements Listener {
 					} else if (!player.isSneaking()) {
 						//Add to
 						current = StorageSerial.GetAt(loc);
-						if (!current.IsType(inhand)) {
+						if (inhand == null || current == null || !current.IsType(inhand)) {
 							//Wrong type
 							return;
 						}
@@ -163,17 +163,17 @@ public class StorageListener implements Listener {
 		
 		@Override
 		public void run() {
-
 			StorageItem current = StorageSerial.GetAt(loc);
 			long count = Math.min(current.Count(), 64);
 			long leftover = 0;
+			boolean changed = false;
 			
 			/*
 			 * From enderchest to hopper
 			 */
 			if (count != 0) {
 				Block down = loc.getBlock().getRelative(BlockFace.DOWN);
-				if (down.getType() == Material.HOPPER) {
+				if (down.getType() == Material.HOPPER && count != 0) {
 					Hopper h = (Hopper)down.getState();
 					HashMap<Integer, ItemStack> res = h.getInventory().addItem(new ItemStack(current.Item().getType(), (int)count));
 					for (ItemStack stack : res.values()) {
@@ -181,8 +181,11 @@ public class StorageListener implements Listener {
 							leftover = stack.getAmount();
 						}
 					}
+					if (leftover - count > 0) {
+						changed = true;
+						current.Add(leftover - count);
+					}
 				}
-				current.Add(leftover - count);
 			}
 			
 			
@@ -200,6 +203,7 @@ public class StorageListener implements Listener {
 								continue;
 							}
 							if (current.IsType(item)) {
+								changed = true;
 								current.Add(item.getAmount());
 							}
 						}
@@ -208,8 +212,9 @@ public class StorageListener implements Listener {
 					}
 				}
 			}
-			
-			StorageSerial.PutAt(loc, current);
+			if (changed) {
+				StorageSerial.PutAt(loc, current);
+			}
 		}
 	}
 	
